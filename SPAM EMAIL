@@ -1,0 +1,186 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyMtrn81w6n1Qkgs0LxTVmHP"
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "code",
+      "source": [
+        "pip install pandas scikit-learn pytesseract pillow PyPDF2\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "collapsed": true,
+        "id": "AwHvpLlfctnS",
+        "outputId": "9a8ba109-3c15-40e6-c8b3-022bc37a6002"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Requirement already satisfied: pandas in /usr/local/lib/python3.11/dist-packages (2.2.2)\n",
+            "Requirement already satisfied: scikit-learn in /usr/local/lib/python3.11/dist-packages (1.6.0)\n",
+            "Collecting pytesseract\n",
+            "  Downloading pytesseract-0.3.13-py3-none-any.whl.metadata (11 kB)\n",
+            "Requirement already satisfied: pillow in /usr/local/lib/python3.11/dist-packages (11.1.0)\n",
+            "Collecting PyPDF2\n",
+            "  Downloading pypdf2-3.0.1-py3-none-any.whl.metadata (6.8 kB)\n",
+            "Requirement already satisfied: numpy>=1.23.2 in /usr/local/lib/python3.11/dist-packages (from pandas) (1.26.4)\n",
+            "Requirement already satisfied: python-dateutil>=2.8.2 in /usr/local/lib/python3.11/dist-packages (from pandas) (2.8.2)\n",
+            "Requirement already satisfied: pytz>=2020.1 in /usr/local/lib/python3.11/dist-packages (from pandas) (2024.2)\n",
+            "Requirement already satisfied: tzdata>=2022.7 in /usr/local/lib/python3.11/dist-packages (from pandas) (2024.2)\n",
+            "Requirement already satisfied: scipy>=1.6.0 in /usr/local/lib/python3.11/dist-packages (from scikit-learn) (1.13.1)\n",
+            "Requirement already satisfied: joblib>=1.2.0 in /usr/local/lib/python3.11/dist-packages (from scikit-learn) (1.4.2)\n",
+            "Requirement already satisfied: threadpoolctl>=3.1.0 in /usr/local/lib/python3.11/dist-packages (from scikit-learn) (3.5.0)\n",
+            "Requirement already satisfied: packaging>=21.3 in /usr/local/lib/python3.11/dist-packages (from pytesseract) (24.2)\n",
+            "Requirement already satisfied: six>=1.5 in /usr/local/lib/python3.11/dist-packages (from python-dateutil>=2.8.2->pandas) (1.17.0)\n",
+            "Downloading pytesseract-0.3.13-py3-none-any.whl (14 kB)\n",
+            "Downloading pypdf2-3.0.1-py3-none-any.whl (232 kB)\n",
+            "\u001b[2K   \u001b[90m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\u001b[0m \u001b[32m232.6/232.6 kB\u001b[0m \u001b[31m4.2 MB/s\u001b[0m eta \u001b[36m0:00:00\u001b[0m\n",
+            "\u001b[?25hInstalling collected packages: pytesseract, PyPDF2\n",
+            "Successfully installed PyPDF2-3.0.1 pytesseract-0.3.13\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import pytesseract\n",
+        "from PIL import Image\n",
+        "import PyPDF2\n",
+        "import pandas as pd\n",
+        "from sklearn.feature_extraction.text import CountVectorizer\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from sklearn.naive_bayes import MultinomialNB\n",
+        "from sklearn.metrics import accuracy_score, classification_report\n",
+        "\n",
+        "# Ensure Tesseract-OCR is installed on your system\n",
+        "# Set the path to Tesseract executable if needed\n",
+        "# Example: pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'\n",
+        "\n",
+        "# 1. Load Dataset\n",
+        "data = pd.read_csv('/spam_ham_dataset.csv')  # Example file with 'text' and 'label' columns\n",
+        "data['label'] = data['label'].map({'spam': 1, 'ham': 0})\n",
+        "\n",
+        "X = data['text']\n",
+        "y = data['label']\n",
+        "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)\n",
+        "\n",
+        "vectorizer = CountVectorizer(stop_words='english', lowercase=True)\n",
+        "X_train_vec = vectorizer.fit_transform(X_train)\n",
+        "X_test_vec = vectorizer.transform(X_test)\n",
+        "\n",
+        "model = MultinomialNB()\n",
+        "model.fit(X_train_vec, y_train)\n",
+        "\n",
+        "# 2. Function to extract text from PDF\n",
+        "def extract_text_from_pdf(pdf_path):\n",
+        "    text = \"\"\n",
+        "    with open(pdf_path, 'rb') as pdf_file:\n",
+        "        reader = PyPDF2.PdfReader(pdf_file)\n",
+        "        for page in reader.pages:\n",
+        "            text += page.extract_text()\n",
+        "    return text\n",
+        "\n",
+        "# 3. Function to extract text from an image (screenshot)\n",
+        "def extract_text_from_image(image_path):\n",
+        "    image = Image.open(image_path)\n",
+        "    text = pytesseract.image_to_string(image)\n",
+        "    return text\n",
+        "\n",
+        "# 4. Spam Detection from Input\n",
+        "def classify_text(text):\n",
+        "    text_vec = vectorizer.transform([text])\n",
+        "    prediction = model.predict(text_vec)\n",
+        "    return \"Spam\" if prediction[0] == 1 else \"Not Spam\"\n",
+        "\n",
+        "# 5. User Interaction\n",
+        "print(\"Choose input type:\\n1. PDF File\\n2. Screenshot (Image File)\")\n",
+        "choice = input(\"Enter your choice (1/2): \")\n",
+        "\n",
+        "if choice == '1':\n",
+        "    pdf_path = input(\"Enter the path to the PDF file: \")\n",
+        "    extracted_text = extract_text_from_pdf(pdf_path)\n",
+        "    print(\"\\nExtracted Text:\\n\", extracted_text)\n",
+        "    result = classify_text(extracted_text)\n",
+        "    print(\"\\nClassification Result:\", result)\n",
+        "\n",
+        "elif choice == '2':\n",
+        "    image_path = input(\"Enter the path to the screenshot/image file: \")\n",
+        "    extracted_text = extract_text_from_image(image_path)\n",
+        "    print(\"\\nExtracted Text:\\n\", extracted_text)\n",
+        "    result = classify_text(extracted_text)\n",
+        "    print(\"\\nClassification Result:\", result)\n",
+        "\n",
+        "else:\n",
+        "    print(\"Invalid choice. Please select 1 or 2.\")\n"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "collapsed": true,
+        "id": "z0dNJF3Cc5tO",
+        "outputId": "fef52782-4ad4-4862-a235-e4cf75079abd"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Choose input type:\n",
+            "1. PDF File\n",
+            "2. Screenshot (Image File)\n",
+            "Enter your choice (1/2): 1\n",
+            "Enter the path to the PDF file: /I just requested to connect - mohdanas20077@gmail.com - Gmail.pdf\n",
+            "\n",
+            "Extracted Text:\n",
+            " Compose\n",
+            "LabelsMoreInbox 3,109\n",
+            "Starred\n",
+            "Snoozed\n",
+            "Sent\n",
+            "Drafts 70\n",
+            "Sync Issues\n",
+            "Conflicts\n",
+            "Local Failures\n",
+            "Server Failures\n",
+            "I just requested to connectInbox×\n",
+            "<invitations@linkedin.com> 09:42 (9 hours ago)\n",
+            "to me\n",
+            "Ankush Yadav Unsubscribe\n",
+            "LinkedIn\n",
+            "Ankush Y adav\n",
+            "Attended Dvm public convent school\n",
+            "Pratapgarh\n",
+            "1 connection in common2 of 7,527\n",
+            "Mail\n",
+            "Chat\n",
+            "Meet99+\n",
+            "Search mail\n",
+            "\n",
+            "Classification Result: Not Spam\n"
+          ]
+        }
+      ]
+    }
+  ]
+}
